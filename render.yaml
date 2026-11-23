@@ -1,0 +1,52 @@
+# Blueprint Render — Web Service du back office.
+# Crée d'abord une base Postgres sur Render, puis renseigne DATABASE_URL
+# avec son Internal Connection String.
+services:
+  - type: web
+    name: backoffice
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: main
+    buildCommand: npm ci && npm run build --workspace backoffice
+    preDeployCommand: npm run db:deploy --workspace backoffice
+    startCommand: npm start --workspace backoffice
+    healthCheckPath: /login
+    autoDeploy: true
+    envVars:
+      - key: TZ
+        value: Europe/Paris
+      - key: DATABASE_URL
+        sync: false
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # Secret de /api/cron/tick — le scheduler interne (instrumentation.ts)
+      # se pinge lui-même toutes les 30 min : monitoring + relances factures.
+      - key: CRON_SECRET
+        generateValue: true
+      # Web Push (PWA) : paire VAPID — `npx web-push generate-vapid-keys`.
+      # La clé publique est inlinée au build (NEXT_PUBLIC_*).
+      - key: NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAULT_ENCRYPTION_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: EMAIL_REPLY_TO
+        sync: false

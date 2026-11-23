@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    # Attendre quelques jours avant d'adopter une version fraîchement publiée
+    # (protège des paquets compromis retirés rapidement du registre).
+    cooldown:
+      default-days: 7
+    groups:
+      minor-et-patch:
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

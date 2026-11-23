@@ -1,0 +1,148 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* DA "Forêt Premium" : émeraude profonde, sidebar sombre verte, accents teal */
+:root {
+  --background: #ffffff;
+  --foreground: #0f1f18;
+  --card: #ffffff;
+  --card-foreground: #0f1f18;
+  --popover: #ffffff;
+  --popover-foreground: #0f1f18;
+  --primary: #047857; /* emerald-700 */
+  --primary-foreground: #ffffff;
+  --secondary: #eef3f0;
+  --secondary-foreground: #0f1f18;
+  --muted: #f1f5f3;
+  --muted-foreground: #5c6f66;
+  --accent: #e6f2ec; /* teinte émeraude claire — surbrillance */
+  --accent-foreground: #064e3b;
+  --destructive: #dc2626;
+  --border: #e0e8e3;
+  --input: #cbd8d0;
+  --ring: #047857;
+  --chart-1: #047857; /* émeraude */
+  --chart-2: #0d9488; /* teal */
+  --chart-3: #34d399; /* émeraude clair */
+  --chart-4: #ca8a04; /* ambre */
+  --chart-5: #0ea5e9; /* ciel */
+  --radius: 0.625rem;
+  /* Sidebar sombre (forêt) */
+  --sidebar: #0c2b20;
+  --sidebar-foreground: #9fe6c8;
+  --sidebar-primary: #34d399;
+  --sidebar-primary-foreground: #04231a;
+  --sidebar-accent: #12463a; /* surbrillance item actif (vert foncé) */
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #143a2b;
+  --sidebar-ring: #34d399;
+}
+
+.dark {
+  --background: #0b1512;
+  --foreground: #e7f2ec;
+  --card: #10201a;
+  --card-foreground: #e7f2ec;
+  --popover: #10201a;
+  --popover-foreground: #e7f2ec;
+  --primary: #34d399;
+  --primary-foreground: #04231a;
+  --secondary: #17352a;
+  --secondary-foreground: #e7f2ec;
+  --muted: #16241e;
+  --muted-foreground: #8fb3a5;
+  --accent: #16362a;
+  --accent-foreground: #ffffff;
+  --destructive: #f87171;
+  --border: #1f3a2f;
+  --input: #24463a;
+  --ring: #34d399;
+  --chart-1: #34d399;
+  --chart-2: #2dd4bf;
+  --chart-3: #6ee7b7;
+  --chart-4: #fbbf24;
+  --chart-5: #38bdf8;
+  --sidebar: #08201a;
+  --sidebar-foreground: #9fe6c8;
+  --sidebar-primary: #34d399;
+  --sidebar-primary-foreground: #04231a;
+  --sidebar-accent: #123c2d;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #16362a;
+  --sidebar-ring: #34d399;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Corbeille des pièces jointes : frétille quand un fichier la survole. */
+@keyframes trash-wiggle {
+  0%, 100% { rotate: 0deg; }
+  25% { rotate: -8deg; }
+  75% { rotate: 8deg; }
+}
+@utility animate-trash-wiggle {
+  animation: trash-wiggle 0.35s ease-in-out infinite;
+}

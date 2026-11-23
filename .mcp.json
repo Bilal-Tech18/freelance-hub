@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "backoffice": {
+      "command": "node",
+      "args": ["packages/mcp-server/dist/index.js"],
+      "env": {
+        "BACKOFFICE_API_URL": "http://localhost:3001",
+        "BACKOFFICE_API_KEY": "${BACKOFFICE_API_KEY}"
+      }
+    }
+  }
+}

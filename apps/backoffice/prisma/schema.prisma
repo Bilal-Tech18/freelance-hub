@@ -1,0 +1,735 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+// Nature d'activité micro : prestations (BNC) ou vente de marchandises (BIC).
+enum ActivityKind {
+  SERVICE_BNC
+  GOODS
+}
+
+enum ProjectStatus {
+  ONBOARDING
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum TicketType {
+  BUG
+  DESIGN_FEEDBACK
+  EVOLUTION
+  QUESTION
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  NEW
+  IN_PROGRESS
+  IN_DEV
+  WAITING_ON_CLIENT
+  RESOLVED
+  CLOSED
+}
+
+enum MilestoneStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+}
+
+enum OnboardingStatus {
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  REVIEWED
+}
+
+enum CredentialProvider {
+  RENDER
+  VERCEL
+  AZURE
+  AWS
+  GCP
+  OVH
+  CLOUDFLARE
+  GITHUB
+  GITLAB
+  CLOUDINARY
+  STRIPE
+  DOMAIN_REGISTRAR
+  DATABASE
+  SMTP_EMAIL
+  CMS
+  ANALYTICS
+  SOCIAL
+  FTP_SSH
+  OTHER
+}
+
+enum CredentialRequestStatus {
+  PENDING
+  PROVIDED
+  SKIPPED
+}
+
+enum BillingType {
+  COMPANY // entreprise / société
+  INDIVIDUAL // particulier
+}
+
+enum DocumentType {
+  INVOICE // facture
+  QUOTE // devis
+}
+
+enum DocumentStatus {
+  DRAFT // brouillon, éditable
+  ISSUED // émis (facture envoyée / devis envoyé)
+  ACCEPTED // devis accepté
+  REFUSED // devis refusé
+  PAID // facture payée
+  CANCELLED // annulé
+}
+
+// ---------- Auth (Better Auth + admin plugin) ----------
+// role: "ADMIN" | "MAINTAINER" | "CLIENT" (string managed by the Better Auth admin plugin)
+// MAINTAINER : compte interne (maintenance) limité aux projets assignés.
+
+model User {
+  id             String               @id @default(cuid())
+  name           String
+  email          String               @unique
+  emailVerified  Boolean              @default(false)
+  image          String?
+  role           String               @default("CLIENT")
+  banned         Boolean?
+  banReason      String?
+  banExpires     DateTime?
+  clientId       String?
+  client         Client?              @relation(fields: [clientId], references: [id])
+  sessions       Session[]
+  accounts       Account[]
+  ticketsCreated Ticket[]             @relation("TicketCreator")
+  statusChanges  TicketStatusChange[]
+  ticketRevisions TicketRevision[]
+  pushSubscriptions PushSubscription[]
+  comments       Comment[]
+  attachments    Attachment[]
+  apiKeys        ApiKey[]
+  loginEvents    LoginEvent[]
+  assignments    ProjectAssignment[]
+  // Palette de couleurs perso (mainteneur) : { c1, c2, c3, c4 } en hex.
+  palette        Json?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@map("user")
+}
+
+// Projet assigné à un mainteneur : délimite tout son périmètre
+// (tickets, vault, dashboard).
+model ProjectAssignment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, projectId])
+  @@index([projectId])
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  expiresAt      DateTime
+  token          String   @unique
+  ipAddress      String?
+  userAgent      String?
+  impersonatedBy String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@map("session")
+}
+
+// Historique des connexions : une ligne par login (les sessions sont
+// supprimées au logout, ce journal est permanent).
+model LoginEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("login_event")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ---------- Domain ----------
+
+model Client {
+  id                     String            @id @default(cuid())
+  name                   String
+  contactEmail           String?
+  phone                  String?
+  notes                  String?           @db.Text
+  // Coordonnées de facturation (admin only)
+  billingType            BillingType       @default(COMPANY)
+  legalName              String? // raison sociale
+  contactName            String? // personne de contact / nom du particulier
+  billingEmail           String?
+  addressLine1           String?
+  addressLine2           String?
+  postalCode             String?
+  city                   String?
+  country                String?           @default("France")
+  siret                  String?
+  siren                  String?
+  vatNumber              String? // n° TVA intracommunautaire
+  legalForm              String? // SARL, SAS, EI…
+  // Apporteur d'affaires (admin only)
+  referrerId             String?
+  referrer               Referrer?         @relation(fields: [referrerId], references: [id])
+  referralDate           DateTime? // date d'apport (départ de la fenêtre de commission)
+  commissionRate         Decimal?          @db.Decimal(5, 2) // % du HT ; sinon taux par défaut de l'apporteur
+  referralDurationMonths Int               @default(12)
+  users                  User[]
+  projects               Project[]
+  invitations            Invitation[]
+  documents              Document[]
+  vault                  VaultCredential[]
+  recurringRevenues      RecurringRevenue[]
+  createdAt              DateTime          @default(now())
+
+  @@index([referrerId])
+}
+
+// Mode d'un revenu récurrent : montant fixe mensuel, ou TJM × jours ouvrés
+// du mois (lun-ven hors fériés français) pour une régie / un full-time.
+enum RecurringMode {
+  FIXED
+  DAILY
+}
+
+// Revenu récurrent mensuel (MRR) : facturation prévue chaque mois pour un
+// client (maintenance, full-time…). Alimente les prévisions de la page CA ;
+// une facture émise/encaissée du client sur un mois remplace le récurrent.
+model RecurringRevenue {
+  id        String        @id @default(cuid())
+  clientId  String
+  client    Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  label     String
+  // FIXED : montant HT par mois ; DAILY : TJM HT (× jours ouvrés du mois).
+  amountHt  Decimal       @db.Decimal(10, 2)
+  mode      RecurringMode @default(FIXED)
+  activity  ActivityKind @default(SERVICE_BNC)
+  // Période d'activité au mois près (1er du mois ; endsOn null = sans fin, mois inclus).
+  startsOn  DateTime     @db.Date
+  endsOn    DateTime?    @db.Date
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([clientId])
+}
+
+model Referrer {
+  id                    String           @id @default(cuid())
+  name                  String
+  email                 String?
+  phone                 String?
+  iban                  String?
+  notes                 String?          @db.Text
+  defaultCommissionRate Decimal          @default(10) @db.Decimal(5, 2)
+  clients               Client[]
+  payouts               ReferrerPayout[]
+  createdAt             DateTime         @default(now())
+}
+
+// Règlement versé à un apporteur (commission payée)
+model ReferrerPayout {
+  id         String   @id @default(cuid())
+  referrerId String
+  referrer   Referrer @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+  amount     Decimal  @db.Decimal(10, 2)
+  method     String? // Virement, CB…
+  note       String?
+  paidAt     DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([referrerId])
+}
+
+model Invitation {
+  id         String    @id @default(cuid())
+  email      String
+  tokenHash  String    @unique
+  clientId   String
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model Project {
+  id                 String              @id @default(cuid())
+  clientId           String
+  client             Client              @relation(fields: [clientId], references: [id])
+  name               String
+  description        String?             @db.Text
+  status             ProjectStatus       @default(ONBOARDING)
+  url                String?
+  // Avancement manuel (0-100). Si null, calculé depuis les jalons.
+  progressOverride   Int?
+  // Facturation (admin only)
+  amountHt           Decimal?            @db.Decimal(10, 2) // montant du devis HT
+  vatRate            Decimal             @default(20) @db.Decimal(5, 2) // taux TVA en %
+  activity           ActivityKind        @default(SERVICE_BNC)
+  tickets            Ticket[]
+  milestones         Milestone[]
+  onboarding         OnboardingResponse?
+  payments           Payment[]
+  versions           ProjectVersion[]
+  documents          Document[]
+  credentialRequests CredentialRequest[]
+  vault              VaultCredential[]
+  timeEntries        TimeEntry[]
+  monitor            SiteMonitor?
+  assignments        ProjectAssignment[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model Payment {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  amount    Decimal     @db.Decimal(10, 2) // euros réellement encaissés (TTC)
+  // Taux de TVA de la facture à l'origine de l'encaissement. Null pour une
+  // saisie manuelle : le CA HT retombe alors sur le taux du projet.
+  vatRate   Decimal?    @db.Decimal(5, 2)
+  method    String? // Virement, CB, Chèque…
+  paidAt    DateTime    @default(now())
+  note      String?
+  document  Document? // encaissement auto-généré par une facture payée
+  // Version (tranche) du projet à laquelle cet encaissement se rapporte.
+  versionId String?
+  version   ProjectVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  createdAt DateTime    @default(now())
+
+  @@index([projectId])
+  @@index([paidAt])
+  @@index([versionId])
+}
+
+// Tranche de facturation d'un projet (v1, v1.1, v2…).
+// Le montant du projet (Project.amountHt) est la somme cachée des versions.
+model ProjectVersion {
+  id         String    @id @default(cuid())
+  projectId  String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  label      String // "v1", "v1.1", "v2"…
+  amountHt   Decimal   @db.Decimal(10, 2)
+  note       String?
+  // Devis source : unique → un devis ne peut être intégré qu'une seule fois.
+  documentId String?   @unique
+  document   Document? @relation("VersionQuote", fields: [documentId], references: [id], onDelete: SetNull)
+  payments   Payment[]
+  // Factures rattachées à cette version (facture d'une seule tranche).
+  invoices   Document[] @relation("InvoiceVersion")
+  createdAt  DateTime  @default(now())
+
+  @@index([projectId])
+}
+
+model Document {
+  id                String         @id @default(cuid())
+  type              DocumentType
+  status            DocumentStatus @default(DRAFT)
+  activity          ActivityKind   @default(SERVICE_BNC)
+  number            String?        @unique // attribué à l'émission (ex: F-2026-0001)
+  year              Int?
+  seq               Int?
+  clientId          String
+  client            Client         @relation(fields: [clientId], references: [id])
+  projectId         String?
+  project           Project?       @relation(fields: [projectId], references: [id])
+  projectVersion    ProjectVersion? @relation("VersionQuote") // version créée depuis ce devis
+  // Version (tranche) facturée : l'encaissement auto de la facture payée y est rattaché.
+  versionId         String?
+  version           ProjectVersion? @relation("InvoiceVersion", fields: [versionId], references: [id], onDelete: SetNull)
+  issueDate         DateTime?
+  dueDate           DateTime? // échéance facture
+  validUntil        DateTime? // validité devis
+  paidAt            DateTime?
+  acceptedAt        DateTime?
+  // Dernière relance interne (email à l'admin) pour cette facture en retard.
+  overdueNotifiedAt DateTime?
+  vatRate           Decimal        @db.Decimal(5, 2)
+  items             Json           @default("[]") // [{ description, quantity, unitPrice }]
+  subtotal          Decimal        @default(0) @db.Decimal(10, 2) // HT
+  vatAmount         Decimal        @default(0) @db.Decimal(10, 2)
+  total             Decimal        @default(0) @db.Decimal(10, 2) // TTC
+  notes             String?        @db.Text
+  // snapshots figés à l'émission (immuabilité légale)
+  sellerSnapshot    Json?
+  clientSnapshot    Json?
+  // liens
+  convertedToId     String?        @unique // devis -> facture générée
+  convertedTo       Document?      @relation("QuoteToInvoice", fields: [convertedToId], references: [id])
+  convertedFrom     Document?      @relation("QuoteToInvoice")
+  paymentId         String?        @unique // encaissement auto créé quand payée
+  payment           Payment?       @relation(fields: [paymentId], references: [id])
+  // true = facture acquittée rattachée à un encaissement saisi AVANT elle : on
+  // ne le supprime pas en repassant la facture en émise.
+  paymentReused     Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([type, year, seq])
+  @@index([clientId])
+  @@index([projectId])
+  @@index([versionId])
+  @@index([type, status])
+}
+
+// Échéance déclarative cochée (présence de la clé = fait).
+// Clés : "urssaf-2026-07", "tva-2026-07", "ir-2026", "cfe-2026"…
+model ComplianceDone {
+  key    String   @id
+  doneAt DateTime @default(now())
+}
+
+// CA HT déclaré ajouté manuellement à un mois (activité d'avant la plateforme).
+model RevenueAdjustment {
+  id        String       @id @default(cuid())
+  year      Int
+  month     Int // 1-12
+  activity  ActivityKind @default(SERVICE_BNC)
+  amountHt  Decimal      @db.Decimal(10, 2)
+  note      String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([year, month, activity])
+}
+
+// URSSAF réellement payée un mois donné (remplace le montant calculé).
+model UrssafOverride {
+  year   Int
+  month  Int // 1-12
+  amount Decimal @db.Decimal(10, 2)
+
+  @@id([year, month])
+}
+
+model Setting {
+  id                 String   @id @default("app") // singleton
+  sellerName         String?
+  sellerLegalForm    String?
+  sellerAddressLine1 String?
+  sellerAddressLine2 String?
+  sellerPostalCode   String?
+  sellerCity         String?
+  sellerCountry      String?  @default("France")
+  sellerEmail        String?
+  sellerPhone        String?
+  siret              String?
+  vatNumber          String?
+  apeCode            String?
+  iban               String?
+  bic                String?
+  bankName           String?
+  invoicePrefix      String   @default("F")
+  quotePrefix        String   @default("D")
+  defaultVatRate     Decimal  @default(20) @db.Decimal(5, 2)
+  paymentTermsDays   Int      @default(30)
+  quoteValidityDays  Int      @default(30)
+  vatExempt          Boolean  @default(false) // franchise en base (art. 293 B CGI)
+  urssafRate         Decimal  @default(25.60) @db.Decimal(5, 2) // taux cotisations micro, prestations BNC (%)
+  urssafRateGoods    Decimal  @default(12.30) @db.Decimal(5, 2) // taux cotisations micro, ventes de marchandises (%)
+  legalMentions      String?  @db.Text
+  updatedAt          DateTime @updatedAt
+}
+
+model Ticket {
+  id            String               @id @default(cuid())
+  number        Int                  @unique @default(autoincrement())
+  projectId     String
+  project       Project              @relation(fields: [projectId], references: [id])
+  createdById   String
+  createdBy     User                 @relation("TicketCreator", fields: [createdById], references: [id])
+  title         String
+  description   String               @db.Text
+  type          TicketType
+  priority      TicketPriority       @default(MEDIUM)
+  status        TicketStatus         @default(NEW)
+  // Ticket interne admin : invisible côté client, aucune notification email.
+  internal      Boolean              @default(false)
+  dueDate       DateTime?
+  resolvedAt    DateTime?
+  closedAt      DateTime?
+  comments      Comment[]
+  attachments   Attachment[]
+  statusChanges TicketStatusChange[]
+  revisions     TicketRevision[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([projectId, status])
+  @@index([status, priority])
+}
+
+// Historique des changements de statut d'un ticket (qui, quoi, quand).
+model TicketStatusChange {
+  id          String       @id @default(cuid())
+  ticketId    String
+  ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fromStatus  TicketStatus
+  toStatus    TicketStatus
+  changedById String
+  changedBy   User         @relation(fields: [changedById], references: [id])
+  createdAt   DateTime     @default(now())
+
+  @@index([ticketId])
+}
+
+// Abonnement Web Push d'un appareil (PWA installée). Un utilisateur peut en
+// avoir plusieurs (iPhone, desktop…) ; supprimé quand le push renvoie 404/410.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Historique des modifications de contenu d'un ticket : snapshot des valeurs
+// AVANT chaque édition. Visible uniquement côté admin.
+model TicketRevision {
+  id                  String         @id @default(cuid())
+  ticketId            String
+  ticket              Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  editedById          String
+  editedBy            User           @relation(fields: [editedById], references: [id])
+  previousTitle       String
+  previousDescription String         @db.Text
+  previousType        TicketType
+  previousPriority    TicketPriority
+  createdAt           DateTime       @default(now())
+
+  @@index([ticketId])
+}
+
+model Comment {
+  id          String       @id @default(cuid())
+  ticketId    String
+  ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User         @relation(fields: [authorId], references: [id])
+  body        String       @db.Text
+  attachments Attachment[]
+  createdAt   DateTime     @default(now())
+
+  @@index([ticketId])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  ticketId     String?
+  ticket       Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  commentId    String?
+  comment      Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  url          String
+  publicId     String
+  filename     String
+  contentType  String
+  size         Int
+  createdAt    DateTime @default(now())
+}
+
+model Milestone {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      MilestoneStatus @default(PLANNED)
+  order       Int             @default(0)
+  startDate   DateTime?
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  @@index([projectId])
+}
+
+model OnboardingResponse {
+  id           String           @id @default(cuid())
+  projectId    String           @unique
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status       OnboardingStatus @default(PENDING)
+  answers      Json             @default("{}")
+  skippedSteps String[]         @default([]) // ids d'étapes passées, à reprendre plus tard
+  submittedAt  DateTime?
+  updatedAt    DateTime         @updatedAt
+}
+
+/**
+ * Demande de compte/accès configurée par l'admin pour un projet.
+ */
+model CredentialRequest {
+  id           String                  @id @default(cuid())
+  projectId    String
+  project      Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  provider     CredentialProvider
+  label        String
+  instructions String?                 @db.Text
+  required     Boolean                 @default(true)
+  order        Int                     @default(0)
+  status       CredentialRequestStatus @default(PENDING)
+  credential   VaultCredential?
+  createdAt    DateTime                @default(now())
+
+  @@index([projectId])
+}
+
+/**
+ * Secret stocké dans le Vault (chiffré au repos).
+ */
+model VaultCredential {
+  id          String             @id @default(cuid())
+  clientId    String
+  client      Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  requestId   String?            @unique
+  request     CredentialRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  provider    CredentialProvider
+  label       String
+  data        String             @db.Text // JSON chiffré AES-256-GCM des champs
+  createdById String
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([clientId])
+  @@index([projectId])
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  keyHash    String    @unique
+  prefix     String
+  scopes     String[]
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// Suivi du temps par projet (timer admin). endedAt null = timer en cours.
+model TimeEntry {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  note      String?
+  createdAt DateTime  @default(now())
+
+  @@index([projectId])
+  @@index([startedAt])
+}
+
+enum SiteStatus {
+  UNKNOWN
+  UP
+  DOWN
+}
+
+// Monitoring uptime (admin only). Deux sortes d'entrées : les projets avec
+// une URL (surveillés par défaut, projectId renseigné) et les sites ajoutés
+// à la main (projectId null, label + url portés par la ligne).
+model SiteMonitor {
+  id             String     @id @default(cuid())
+  projectId      String?    @unique
+  project        Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  label          String? // sites manuels uniquement
+  url            String? // sites manuels uniquement (sinon Project.url)
+  enabled        Boolean    @default(true)
+  hidden         Boolean    @default(false) // projet retiré du monitoring (réaffichable)
+  status         SiteStatus @default(UNKNOWN)
+  lastCheckedAt  DateTime?
+  lastStatusCode Int?
+  lastError      String?
+  responseMs     Int?
+  lastOkAt       DateTime?
+  downSince      DateTime?
+  lastAlertAt    DateTime? // dernière alerte "down" envoyée (anti-spam)
+  updatedAt      DateTime   @updatedAt
+}
+
+// Horodatage du dernier passage d'un job cron (clé = nom du job).
+model CronState {
+  key   String   @id
+  runAt DateTime
+}
+
