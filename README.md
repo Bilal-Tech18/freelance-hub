@@ -33,6 +33,7 @@ Un seul outil pour gérer ses clients au lieu de jongler entre un Trello, un Goo
 - Clients, projets, versions de facturation, invitations par lien
 - Factures & devis en PDF, numérotation, relances automatiques des factures en retard
 - Finance micro-entreprise : CA BNC / ventes, cotisations URSSAF estimées, revenus récurrents (MRR)
+- Calendrier : tâches ponctuelles ou récurrentes (maintenance, renouvellements…) et échéances URSSAF / TVA mensuelles ou trimestrielles, avec rappels email + push
 - Apporteurs d'affaires et calcul des commissions
 - Suivi du temps, monitoring de disponibilité des sites clients, journal des connexions
 - Rôle « mainteneur » limité aux projets qui lui sont assignés

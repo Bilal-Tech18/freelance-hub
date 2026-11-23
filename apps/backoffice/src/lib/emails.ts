@@ -191,3 +191,32 @@ export async function sendInvitationEmail(params: {
     html: `<p>Bonjour,</p><p>Un espace client a été créé pour <strong>${params.clientName}</strong>. Créez votre compte pour suivre votre projet et faire vos retours :</p><p><a href="${params.url}">Créer mon compte</a></p><p>Ce lien expire dans 7 jours.</p>`,
   });
 }
+
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+/** Rappel interne : tâches du calendrier qui arrivent. */
+export async function sendCalendarReminderEmail(params: {
+  tasks: { title: string; notes: string; when: string }[];
+}) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3001";
+  const rows = params.tasks
+    .map(
+      (t) =>
+        `<li><strong>${escapeHtml(t.title)}</strong> — ${t.when}${t.notes ? `<br><span style="color:#666">${escapeHtml(t.notes)}</span>` : ""}</li>`
+    )
+    .join("");
+  const n = params.tasks.length;
+  await send({
+    to: ADMIN_EMAIL,
+    subject:
+      n === 1
+        ? `📅 Rappel — ${params.tasks[0].title}`
+        : `📅 ${n} tâches à venir dans votre calendrier`,
+    html: `<ul>${rows}</ul><p><a href="${baseUrl}/admin/calendar">Ouvrir le calendrier</a></p>`,
+    push: {
+      body: params.tasks.map((t) => (n === 1 ? t.when : `${t.title} (${t.when})`)).join(", "),
+      path: "/admin/calendar",
+    },
+  });
+}

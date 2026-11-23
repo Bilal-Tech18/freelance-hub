@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   Activity,
   Bell,
+  CalendarDays,
   ChevronRight,
   FileText,
   FolderKanban,
@@ -29,7 +30,10 @@ type Group = { title?: string; items: Item[] };
 
 const GROUPS: Group[] = [
   {
-    items: [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true }],
+    items: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/admin/calendar", label: "Calendrier", icon: CalendarDays },
+    ],
   },
   {
     title: "Clients & projets",

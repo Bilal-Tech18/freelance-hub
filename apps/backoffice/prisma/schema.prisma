@@ -733,3 +733,43 @@ model CronState {
   runAt DateTime
 }
 
+// ---------- Calendrier (échéances et tâches ponctuelles ou récurrentes) ----------
+
+enum CalendarRecurrence {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// Une tâche = une série. Les occurrences sont calculées à la volée
+// (src/lib/recurrence.ts) ; seul leur état (fait / rappel envoyé) est stocké.
+model CalendarTask {
+  id               String               @id @default(cuid())
+  title            String
+  notes            String               @default("")
+  startDate        String // "YYYY-MM-DD" — première occurrence
+  time             String? // "HH:mm" (heure de Paris), null = toute la journée
+  recurrence       CalendarRecurrence   @default(NONE)
+  interval         Int                  @default(1) // tous les N jours/semaines/mois/ans
+  endDate          String? // "YYYY-MM-DD" inclus, null = sans fin
+  // Rappel push + email N jours avant l'occurrence (0 = le jour même), null = aucun
+  remindDaysBefore Int?
+  // Tâche générée par un réglage (« URSSAF », « TVA ») : une seule par type
+  preset           String?              @unique
+  occurrences      CalendarOccurrence[]
+  createdAt        DateTime             @default(now())
+}
+
+model CalendarOccurrence {
+  id         String       @id @default(cuid())
+  taskId     String
+  task       CalendarTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  date       String // "YYYY-MM-DD"
+  doneAt     DateTime?
+  notifiedAt DateTime?
+
+  @@unique([taskId, date])
+  @@index([date])
+}
