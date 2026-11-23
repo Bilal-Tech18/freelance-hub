@@ -19,6 +19,10 @@ Un seul outil pour gérer ses clients au lieu de jongler entre un Trello, un Goo
 | **Portail client : suivi du projet** | **Portail client : accès chiffrés** |
 | ![Portail client](docs/screenshots/portal-project.jpg) | ![Vault](docs/screenshots/portal-vault.jpg) |
 
+**Calendrier : tâches récurrentes et échéances URSSAF / TVA**
+
+![Calendrier](docs/screenshots/calendar.jpg)
+
 ## Fonctionnalités
 
 **Côté client (portail)**

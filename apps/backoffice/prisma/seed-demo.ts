@@ -15,6 +15,8 @@ import type {
 import { auth } from "../src/lib/auth";
 import { db } from "../src/lib/db";
 import { computeTotals, docDayKey, formatDocNumber, type LineItem } from "../src/lib/documents";
+import { fiscalTask } from "../src/lib/fiscal-deadlines";
+import { addDays, occurrencesBetween, parisNow, weekdayIndex } from "../src/lib/recurrence";
 import { computeDueDate } from "../src/lib/sla";
 
 const CLIENT_PASSWORD = "demo-client-2026";
@@ -462,6 +464,59 @@ async function main() {
   const ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15";
   for (const [userId, d] of [[sophie.id, 1], [thomas.id, 0], [claire.id, 2], [nadia.id, 1], [maintainer.id, 0]] as const) {
     await db.loginEvent.create({ data: { userId, ipAddress: "203.0.113.10", userAgent: ua, createdAt: daysAgo(d, 8) } });
+  }
+
+  // ---------- Calendrier ----------
+  const today = parisNow(now).day;
+  // Vendredi (index 4) le plus récent avant aujourd'hui.
+  const lastFriday = addDays(today, -((weekdayIndex(today) + 3) % 7 || 7));
+  const calendarTasks = await Promise.all([
+    db.calendarTask.create({
+      data: { ...fiscalTask("URSSAF", "MONTHLY", today), remindDaysBefore: 7, preset: "URSSAF" },
+    }),
+    db.calendarTask.create({
+      data: { ...fiscalTask("TVA", "QUARTERLY", today), remindDaysBefore: 7, preset: "TVA" },
+    }),
+    db.calendarTask.create({
+      data: {
+        title: "Maintenance mensuelle — Atelier Lumen",
+        notes: "Mises à jour, sauvegarde, contrôle des formulaires et du certificat SSL.",
+        startDate: addDays(today, -26),
+        time: "10:00",
+        recurrence: "MONTHLY",
+        remindDaysBefore: 1,
+      },
+    }),
+    db.calendarTask.create({
+      data: {
+        title: "Sauvegarde des sites clients",
+        startDate: lastFriday,
+        time: "17:00",
+        recurrence: "WEEKLY",
+        remindDaysBefore: 0,
+      },
+    }),
+    db.calendarTask.create({
+      data: {
+        title: "Renouvellement du nom de domaine — Rivière",
+        notes: "Vérifier le renouvellement automatique chez le registrar.",
+        startDate: addDays(today, 12),
+        recurrence: "YEARLY",
+        remindDaysBefore: 7,
+      },
+    }),
+    db.calendarTask.create({
+      data: { title: "Point d'avancement — Kinetik", startDate: addDays(today, 2), time: "14:30", remindDaysBefore: 0 },
+    }),
+    db.calendarTask.create({
+      data: { title: "Envoyer le rapport de maintenance — Orée", startDate: addDays(today, -3), remindDaysBefore: 0 },
+    }),
+  ]);
+  // Occurrences passées cochées, sauf le rapport Orée laissé en retard.
+  for (const task of calendarTasks.filter((t) => !t.title.includes("Orée"))) {
+    for (const date of occurrencesBetween(task, addDays(today, -40), addDays(today, -1))) {
+      await db.calendarOccurrence.create({ data: { taskId: task.id, date, doneAt: daysAgo(1) } });
+    }
   }
 
   console.log("Démo chargée. Comptes clients (mot de passe : " + CLIENT_PASSWORD + ") :");
