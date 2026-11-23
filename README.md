@@ -48,6 +48,22 @@ Next.js 16 (App Router, Server Actions) · React 19 · TypeScript · Prisma + Po
 
 ## Démarrage rapide
 
+### Avec Docker (le plus simple)
+
+```bash
+git clone https://github.com/Bilal-Tech18/freelance-hub.git
+cd freelance-hub
+DEMO_DATA=true docker compose up -d
+```
+
+L'app tourne sur http://localhost:3001 avec sa base Postgres. Connexion : `admin@demo.local` / `demo-admin-2026`.
+
+- Les migrations passent à chaque démarrage ; les secrets (`BETTER_AUTH_SECRET`, `VAULT_ENCRYPTION_KEY`, `CRON_SECRET`) sont générés au premier lancement et conservés dans un volume.
+- `DEMO_DATA=true` charge les données de démo, uniquement sur une base vide.
+- Pour configurer (URL publique, mot de passe admin, emails…) : `cp .env.docker.example .env` puis `docker compose up -d`. **En production, change `ADMIN_PASSWORD` et `POSTGRES_PASSWORD`.**
+
+### Sans Docker
+
 Prérequis : Node 20+, une base PostgreSQL.
 
 ```bash
@@ -106,7 +122,7 @@ Puis, dans la config de votre client MCP :
 
 Un blueprint [Render](https://render.com) est fourni (`render.yaml`) : créer une base Postgres, renseigner les variables marquées `sync: false`, déployer. Les migrations passent en `preDeployCommand`.
 
-N'importe quel hébergeur Node + Postgres fonctionne : `npm run build --workspace backoffice` puis `npm run db:deploy --workspace backoffice && npm start --workspace backoffice`.
+L'image Docker (`Dockerfile`) se déploie aussi telle quelle sur tout hébergeur de conteneurs. Sinon, n'importe quel hébergeur Node + Postgres fonctionne : `npm run build --workspace backoffice` puis `npm run db:deploy --workspace backoffice && npm start --workspace backoffice`.
 
 ## Sécurité
 

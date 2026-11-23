@@ -176,7 +176,7 @@ export function AdminTicketsTable({
             <TableHead>Type</TableHead>
             <TableHead>Priorité</TableHead>
             <TableHead>Statut</TableHead>
-            <TableHead>Créé</TableHead>
+            <TableHead className="hidden 2xl:table-cell">Créé</TableHead>
             <TableHead>Deadline</TableHead>
           </TableRow>
         </TableHeader>
@@ -207,7 +207,9 @@ export function AdminTicketsTable({
               <TableCell className="text-muted-foreground">
                 #{t.number}
               </TableCell>
-              <TableCell>
+              {/* Seules les colonnes texte passent à la ligne : sans ça, le tableau
+                  déborde dès 1440 px et le statut finit masqué par le scroll. */}
+              <TableCell className="min-w-48 whitespace-normal">
                 <span className="font-medium">{t.title}</span>
                 {t.internal && (
                   <span className="ml-2 inline-flex align-middle">
@@ -220,7 +222,7 @@ export function AdminTicketsTable({
                   </span>
                 )}
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
+              <TableCell className="min-w-40 whitespace-normal text-sm text-muted-foreground">
                 {t.clientProject}
               </TableCell>
               <TableCell>
@@ -239,7 +241,7 @@ export function AdminTicketsTable({
                   {t.overdue && <OverdueBadge />}
                 </div>
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground 2xl:table-cell">
                 {t.createdAt}
               </TableCell>
               <TableCell

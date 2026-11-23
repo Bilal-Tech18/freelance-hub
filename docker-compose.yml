@@ -1,0 +1,59 @@
+# Lancement local ou auto-hébergé : `docker compose up -d` → http://localhost:3001
+# Les variables se surchargent via un fichier .env à côté de ce fichier
+# (voir .env.docker.example). En production, changer ADMIN_PASSWORD et APP_URL.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hub}
+      POSTGRES_DB: hub
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hub -d hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      DATABASE_URL: postgresql://hub:${POSTGRES_PASSWORD:-hub}@db:5432/hub
+      BETTER_AUTH_URL: ${APP_URL:-http://localhost:3001}
+      NEXT_PUBLIC_APP_URL: ${APP_URL:-http://localhost:3001}
+      TZ: ${TZ:-Europe/Paris}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@demo.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-demo-admin-2026}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin}
+      DEMO_DATA: ${DEMO_DATA:-false}
+      # Vides = générés au premier démarrage et conservés dans le volume app-data.
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
+      VAULT_ENCRYPTION_KEY: ${VAULT_ENCRYPTION_KEY:-}
+      CRON_SECRET: ${CRON_SECRET:-}
+      # Optionnels : sans Resend les emails partent dans les logs, sans
+      # Cloudinary l'upload de captures dans les tickets est désactivé.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+    volumes:
+      - app-data:/app/data
+
+volumes:
+  db-data:
+  app-data:

@@ -49,3 +49,5 @@ coverage
 
 # Artefacts des sessions Playwright MCP (captures, logs)
 .playwright-mcp/
+!.env.example
+!.env.docker.example
