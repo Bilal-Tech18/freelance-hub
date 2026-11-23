@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { tooltipTheme } from "./chart-theme";
 
 export function WeeklyChart({
   data,
@@ -22,7 +23,7 @@ export function WeeklyChart({
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis dataKey="week" fontSize={12} />
         <YAxis allowDecimals={false} fontSize={12} width={30} />
-        <Tooltip />
+        <Tooltip {...tooltipTheme} />
         <Legend />
         <Bar dataKey="created" name="Créés" fill="var(--color-chart-1, #6366f1)" radius={[3, 3, 0, 0]} />
         <Bar dataKey="resolved" name="Résolus" fill="var(--color-chart-2, #22c55e)" radius={[3, 3, 0, 0]} />

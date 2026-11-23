@@ -14,6 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { tooltipTheme } from "./chart-theme";
 import type { FinancePoint } from "@/lib/services/finance";
 
 const eur0 = new Intl.NumberFormat("fr-FR", {
@@ -37,7 +38,7 @@ export function MonthlyIncomeChart({ data }: { data: FinancePoint[] }) {
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis dataKey="month" fontSize={12} />
         <YAxis tickFormatter={axisEur} fontSize={12} width={60} />
-        <Tooltip formatter={tooltipEur} />
+        <Tooltip formatter={tooltipEur} {...tooltipTheme} />
         <Legend />
         <Bar
           dataKey="declaredHt"
@@ -64,7 +65,7 @@ export function CumulativeRevenueChart({ data }: { data: FinancePoint[] }) {
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis dataKey="month" fontSize={12} />
         <YAxis tickFormatter={axisEur} fontSize={12} width={60} />
-        <Tooltip formatter={tooltipEur} />
+        <Tooltip formatter={tooltipEur} {...tooltipTheme} />
         <Area
           type="monotone"
           dataKey="cumulativeHt"
@@ -86,7 +87,7 @@ export function MonthlyReceivedChart({ data }: { data: FinancePoint[] }) {
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis dataKey="month" fontSize={12} />
         <YAxis tickFormatter={axisEur} fontSize={12} width={60} />
-        <Tooltip formatter={tooltipEur} />
+        <Tooltip formatter={tooltipEur} {...tooltipTheme} />
         <Line
           type="monotone"
           dataKey="received"

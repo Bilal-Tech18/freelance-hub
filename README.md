@@ -2,7 +2,22 @@
 
 > Back-office auto-hébergé pour développeurs freelance : tickets clients, portail client, factures & devis, suivi URSSAF — avec une API REST et un serveur MCP.
 
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/dashboard-light.jpg">
+  <img alt="Dashboard admin de Freelance Hub" src="docs/screenshots/dashboard.jpg">
+</picture>
+
 Un seul outil pour gérer ses clients au lieu de jongler entre un Trello, un Google Drive, un tableur de facturation et des mails perdus. Le client a son propre espace pour remonter des bugs, suivre l'avancement et transmettre ses accès ; le freelance pilote tout depuis un cockpit admin.
+
+## Aperçu
+
+| Kanban des tickets | Fil d'un ticket |
+|---|---|
+| ![Kanban](docs/screenshots/kanban.jpg) | ![Ticket](docs/screenshots/ticket.jpg) |
+| **Factures & devis** | **CA & URSSAF** |
+| ![Factures](docs/screenshots/documents.jpg) | ![Finance](docs/screenshots/finance.jpg) |
+| **Portail client : suivi du projet** | **Portail client : accès chiffrés** |
+| ![Portail client](docs/screenshots/portal-project.jpg) | ![Vault](docs/screenshots/portal-vault.jpg) |
 
 ## Fonctionnalités
 
@@ -49,6 +64,20 @@ npm run dev                                 # http://localhost:3001
 ```
 
 Sans `RESEND_API_KEY`, les emails sont affichés dans la console : pratique en local.
+
+### Données de démo
+
+```bash
+npm run db:seed:demo --workspace backoffice
+```
+
+Charge 5 clients fictifs, leurs projets, 18 tickets, des factures et devis sur 12 mois, un accès dans le Vault et le monitoring. Le script refuse de tourner si la base contient déjà des clients.
+
+| Rôle | Email | Mot de passe |
+|---|---|---|
+| Admin | `ADMIN_EMAIL` du `.env` | `ADMIN_PASSWORD` du `.env` |
+| Client | `c.vasseur@vasseur-avocats.example` | `demo-client-2026` |
+| Mainteneur | `lea@demo.local` | `demo-client-2026` |
 
 ### Serveur MCP
 
